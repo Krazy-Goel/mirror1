@@ -43,22 +43,22 @@ def stats(update, context):
     mem_t = get_readable_file_size(memory.total)
     mem_a = get_readable_file_size(memory.available)
     mem_u = get_readable_file_size(memory.used)
-    stats = f'<b>Commit Date:</b> {last_commit}\n'\
-            f'<b>Bot Uptime:</b> {currentTime}\n'\
-            f'<b>OS Uptime:</b> {osUptime}\n'\
-            f'<b>Total Disk Space:</b> {total}\n'\
-            f'<b>Used:</b> {used} | <b>Free:</b> {free}\n'\
-            f'<b>Upload:</b> {sent}\n'\
-            f'<b>Download:</b> {recv}\n'\
-            f'<b>CPU:</b> {cpuUsage}%\n'\
-            f'<b>RAM:</b> {mem_p}%\n'\
-            f'<b>DISK:</b> {disk}%\n'\
-            f'<b>Physical Cores:</b> {p_core}\n'\
-            f'<b>Total Cores:</b> {t_core}\n'\
-            f'<b>SWAP:</b> {swap_t} | <b>Used:</b> {swap_p}%\n'\
-            f'<b>Memory Total:</b> {mem_t}\n'\
-            f'<b>Memory Free:</b> {mem_a}\n'\
-            f'<b>Memory Used:</b> {mem_u}\n'
+    stats = f'<b>📅Commit Date📅:</b> {last_commit}\n\n'\
+            f'<b>⌚Bot Uptime⌚:</b> {currentTime}\n'\
+            f'<b>OS Uptime:</b> {osUptime}\n\n'\
+            f'<b>💾Total Disk Space💾:</b> {total}\n'\
+            f'<b>💿Used💿:</b> {used} | <b>💿Free💿:</b> {free}\n\n'\
+            f'<b>⏫Upload:</b> {sent}\n'\
+            f'<b>⏬Download:</b> {recv}\n\n'\
+            f'<b>🖥CPU:</b> {cpuUsage}%\n'\
+            f'<b>♻️RAM:</b> {mem_p}%\n'\
+            f'<b>🧰DISK:</b> {disk}%\n\n'\
+            f'<b>🏦Physical Cores:</b> {p_core}\n'\
+            f'<b>💶Total Cores:</b> {t_core}\n\n'\
+            f'<b>💥SWAP💥:</b> {swap_t} | <b>Used:</b> {swap_p}%\n'\
+            f'<b>🔫Memory Total:</b> {mem_t}\n'\
+            f'<b>📡Memory Free:</b> {mem_a}\n'\
+            f'<b>⏳Memory Used:</b> {mem_u}\n'
     heroku = getHerokuDetails(HEROKU_API_KEY, HEROKU_APP_NAME)
     if heroku: stats += heroku
     sendMessage(stats, context.bot, update.message)
@@ -221,7 +221,42 @@ def bot_help(update, context):
     reply_markup = InlineKeyboardMarkup(button.build_menu(1))
     sendMarkup(help_string, context.bot, update.message, reply_markup)
 
+botcmds = [
+
+        (f'{BotCommands.MirrorCommand}', 'Mirror'),
+        (f'{BotCommands.ZipMirrorCommand}','Mirror and upload as zip'),
+        (f'{BotCommands.UnzipMirrorCommand}','Mirror and extract files'),
+        (f'{BotCommands.QbMirrorCommand}','Mirror torrent using qBittorrent'),
+        (f'{BotCommands.QbZipMirrorCommand}','Mirror torrent and upload as zip using qb'),
+        (f'{BotCommands.QbUnzipMirrorCommand}','Mirror torrent and extract files using qb'),
+        (f'{BotCommands.WatchCommand}','Mirror yt-dlp supported link'),
+        (f'{BotCommands.ZipWatchCommand}','Mirror yt-dlp supported link as zip'),
+        (f'{BotCommands.CloneCommand}','Copy file/folder to Drive'),
+        (f'{BotCommands.LeechCommand}','Leech'),
+        (f'{BotCommands.ZipLeechCommand}','Leech and upload as zip'),
+        (f'{BotCommands.UnzipLeechCommand}','Leech and extract files'),
+        (f'{BotCommands.QbLeechCommand}','Leech torrent using qBittorrent'),
+        (f'{BotCommands.QbZipLeechCommand}','Leech torrent and upload as zip using qb'),
+        (f'{BotCommands.QbUnzipLeechCommand}','Leech torrent and extract using qb'),
+        (f'{BotCommands.LeechWatchCommand}','Leech yt-dlp supported link'),
+        (f'{BotCommands.LeechZipWatchCommand}','Leech yt-dlp supported link as zip'),
+        (f'{BotCommands.CountCommand}','Count file/folder of Drive'),
+        (f'{BotCommands.DeleteCommand}','Delete file/folder from Drive'),
+        (f'{BotCommands.CancelMirror}','Cancel a task'),
+        (f'{BotCommands.CancelAllCommand}','Cancel all downloading tasks'),
+        (f'{BotCommands.ListCommand}','Search in Drive'),
+        (f'{BotCommands.LeechSetCommand}','Leech settings'),
+        (f'{BotCommands.SetThumbCommand}','Set thumbnail'),
+        (f'{BotCommands.StatusCommand}','Get mirror status message'),
+        (f'{BotCommands.StatsCommand}','Bot usage stats'),
+        (f'{BotCommands.PingCommand}','Ping the bot'),
+        (f'{BotCommands.RestartCommand}','Restart the bot'),
+        (f'{BotCommands.LogCommand}','Get the bot Log'),
+        (f'{BotCommands.HelpCommand}','Get detailed help')
+    ]
+
 def main():
+    bot.set_my_commands(botcmds)
     start_cleanup()
     if INCOMPLETE_TASK_NOTIFIER and DB_URI is not None:
         if notifier_dict := DbManger().get_incomplete_tasks():
