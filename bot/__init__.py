@@ -763,6 +763,188 @@ BASE_URL_PORT = 80 if len(BASE_URL_PORT) == 0 else int(BASE_URL_PORT)
 USE_SERVICE_ACCOUNTS = environ.get('USE_SERVICE_ACCOUNTS', '')
 USE_SERVICE_ACCOUNTS = USE_SERVICE_ACCOUNTS.lower() == 'true'
 
+DOWNLOAD_DIR = environ.get('DOWNLOAD_DIR', '')
+if len(DOWNLOAD_DIR) == 0:
+    DOWNLOAD_DIR = '/usr/src/app/downloads/'
+elif not DOWNLOAD_DIR.endswith("/"):
+    DOWNLOAD_DIR = f'{DOWNLOAD_DIR}/'
+
+AUTHORIZED_CHATS = environ.get('AUTHORIZED_CHATS', '')
+if len(AUTHORIZED_CHATS) != 0:
+    aid = AUTHORIZED_CHATS.split()
+    for id_ in aid:
+        user_data[int(id_.strip())] = {'is_auth': True}
+
+SUDO_USERS = environ.get('SUDO_USERS', '')
+if len(SUDO_USERS) != 0:
+    aid = SUDO_USERS.split()
+    for id_ in aid:
+        user_data[int(id_.strip())] = {'is_sudo': True}
+
+EXTENSION_FILTER = environ.get('EXTENSION_FILTER', '')
+if len(EXTENSION_FILTER) > 0:
+    fx = EXTENSION_FILTER.split()
+    for x in fx:
+        if x.strip().startswith('.'):
+            x = x.lstrip('.')
+        GLOBAL_EXTENSION_FILTER.append(x.strip().lower())
+
+IS_PREMIUM_USER = False
+user = ''
+USER_SESSION_STRING = environ.get('USER_SESSION_STRING', '')
+if len(USER_SESSION_STRING) != 0:
+    log_info("Creating client from USER_SESSION_STRING")
+    user = tgClient('user', TELEGRAM_API, TELEGRAM_HASH, session_string=USER_SESSION_STRING,
+                    parse_mode=enums.ParseMode.HTML, no_updates=True, max_concurrent_transmissions=1000).start()
+    IS_PREMIUM_USER = user.me.is_premium
+
+MEGA_API_KEY = environ.get('MEGA_API_KEY', '')
+if len(MEGA_API_KEY) == 0:
+    log_warning('MEGA API KEY not provided!')
+    MEGA_API_KEY = ''
+
+MEGA_EMAIL_ID = environ.get('MEGA_EMAIL_ID', '')
+MEGA_PASSWORD = environ.get('MEGA_PASSWORD', '')
+if len(MEGA_EMAIL_ID) == 0 or len(MEGA_PASSWORD) == 0:
+    log_warning('MEGA Credentials not provided!')
+    MEGA_EMAIL_ID = ''
+    MEGA_PASSWORD = ''
+
+UPTOBOX_TOKEN = environ.get('UPTOBOX_TOKEN', '')
+if len(UPTOBOX_TOKEN) == 0:
+    UPTOBOX_TOKEN = ''
+
+INDEX_URL = environ.get('INDEX_URL', '').rstrip("/")
+if len(INDEX_URL) == 0:
+    INDEX_URL = ''
+
+SEARCH_API_LINK = environ.get('SEARCH_API_LINK', '').rstrip("/")
+if len(SEARCH_API_LINK) == 0:
+    SEARCH_API_LINK = ''
+
+LEECH_FILENAME_PREFIX = environ.get('LEECH_FILENAME_PREFIX', '')
+if len(LEECH_FILENAME_PREFIX) == 0:
+    LEECH_FILENAME_PREFIX = ''
+
+SEARCH_PLUGINS = environ.get('SEARCH_PLUGINS', '')
+if len(SEARCH_PLUGINS) == 0:
+    SEARCH_PLUGINS = ''
+
+MAX_SPLIT_SIZE = 4194304000 if IS_PREMIUM_USER else 2097152000
+
+LEECH_SPLIT_SIZE = environ.get('LEECH_SPLIT_SIZE', '')
+if len(LEECH_SPLIT_SIZE) == 0 or int(LEECH_SPLIT_SIZE) > MAX_SPLIT_SIZE:
+    LEECH_SPLIT_SIZE = MAX_SPLIT_SIZE
+else:
+    LEECH_SPLIT_SIZE = int(LEECH_SPLIT_SIZE)
+
+STATUS_UPDATE_INTERVAL = environ.get('STATUS_UPDATE_INTERVAL', '')
+if len(STATUS_UPDATE_INTERVAL) == 0:
+    STATUS_UPDATE_INTERVAL = 10
+else:
+    STATUS_UPDATE_INTERVAL = int(STATUS_UPDATE_INTERVAL)
+
+AUTO_DELETE_MESSAGE_DURATION = environ.get('AUTO_DELETE_MESSAGE_DURATION', '')
+if len(AUTO_DELETE_MESSAGE_DURATION) == 0:
+    AUTO_DELETE_MESSAGE_DURATION = 30
+else:
+    AUTO_DELETE_MESSAGE_DURATION = int(AUTO_DELETE_MESSAGE_DURATION)
+
+YT_DLP_QUALITY = environ.get('YT_DLP_QUALITY', '')
+if len(YT_DLP_QUALITY) == 0:
+    YT_DLP_QUALITY = ''
+
+SEARCH_LIMIT = environ.get('SEARCH_LIMIT', '')
+SEARCH_LIMIT = 0 if len(SEARCH_LIMIT) == 0 else int(SEARCH_LIMIT)
+
+DUMP_CHAT = environ.get('DUMP_CHAT', '')
+DUMP_CHAT = '' if len(DUMP_CHAT) == 0 else int(DUMP_CHAT)
+
+STATUS_LIMIT = environ.get('STATUS_LIMIT', '')
+STATUS_LIMIT = 10 if len(STATUS_LIMIT) == 0 else int(STATUS_LIMIT)
+
+CMD_SUFFIX = environ.get('CMD_SUFFIX', '')
+
+RSS_CHAT_ID = environ.get('RSS_CHAT_ID', '')
+RSS_CHAT_ID = '' if len(RSS_CHAT_ID) == 0 else int(RSS_CHAT_ID)
+
+RSS_DELAY = environ.get('RSS_DELAY', '')
+RSS_DELAY = 900 if len(RSS_DELAY) == 0 else int(RSS_DELAY)
+
+TORRENT_TIMEOUT = environ.get('TORRENT_TIMEOUT', '')
+TORRENT_TIMEOUT = '' if len(TORRENT_TIMEOUT) == 0 else int(TORRENT_TIMEOUT)
+
+QUEUE_ALL = environ.get('QUEUE_ALL', '')
+QUEUE_ALL = '' if len(QUEUE_ALL) == 0 else int(QUEUE_ALL)
+
+QUEUE_DOWNLOAD = environ.get('QUEUE_DOWNLOAD', '')
+QUEUE_DOWNLOAD = '' if len(QUEUE_DOWNLOAD) == 0 else int(QUEUE_DOWNLOAD)
+
+QUEUE_UPLOAD = environ.get('QUEUE_UPLOAD', '')
+QUEUE_UPLOAD = '' if len(QUEUE_UPLOAD) == 0 else int(QUEUE_UPLOAD)
+
+INCOMPLETE_TASK_NOTIFIER = environ.get('INCOMPLETE_TASK_NOTIFIER', '')
+INCOMPLETE_TASK_NOTIFIER = INCOMPLETE_TASK_NOTIFIER.lower() == 'true'
+
+STOP_DUPLICATE = environ.get('STOP_DUPLICATE', '')
+STOP_DUPLICATE = STOP_DUPLICATE.lower() == 'true'
+
+VIEW_LINK = environ.get('VIEW_LINK', '')
+VIEW_LINK = VIEW_LINK.lower() == 'true'
+
+IS_TEAM_DRIVE = environ.get('IS_TEAM_DRIVE', '')
+IS_TEAM_DRIVE = IS_TEAM_DRIVE.lower() == 'true'
+
+USE_SERVICE_ACCOUNTS = environ.get('USE_SERVICE_ACCOUNTS', '')
+USE_SERVICE_ACCOUNTS = USE_SERVICE_ACCOUNTS.lower() == 'true'
+
+WEB_PINCODE = environ.get('WEB_PINCODE', '')
+WEB_PINCODE = WEB_PINCODE.lower() == 'true'
+
+AS_DOCUMENT = environ.get('AS_DOCUMENT', '')
+AS_DOCUMENT = AS_DOCUMENT.lower() == 'true'
+
+EQUAL_SPLITS = environ.get('EQUAL_SPLITS', '')
+EQUAL_SPLITS = EQUAL_SPLITS.lower() == 'true'
+
+MEDIA_GROUP = environ.get('MEDIA_GROUP', '')
+MEDIA_GROUP = MEDIA_GROUP.lower() == 'true'
+
+BASE_URL_PORT = environ.get('BASE_URL_PORT', '')
+BASE_URL_PORT = 80 if len(BASE_URL_PORT) == 0 else int(BASE_URL_PORT)
+
+BASE_URL = environ.get('BASE_URL', '').rstrip("/")
+if len(BASE_URL) == 0:
+    log_warning('BASE_URL not provided!')
+    BASE_URL = ''
+
+UPSTREAM_REPO = environ.get('UPSTREAM_REPO', '')
+if len(UPSTREAM_REPO) == 0:
+    UPSTREAM_REPO = ''
+
+UPSTREAM_BRANCH = environ.get('UPSTREAM_BRANCH', '')
+if len(UPSTREAM_BRANCH) == 0:
+    UPSTREAM_BRANCH = 'master'
+
+RCLONE_SERVE_URL = environ.get('RCLONE_SERVE_URL', '')
+if len(RCLONE_SERVE_URL) == 0:
+    RCLONE_SERVE_URL = ''
+
+RCLONE_SERVE_PORT = environ.get('RCLONE_SERVE_PORT', '')
+RCLONE_SERVE_PORT = 8080 if len(
+    RCLONE_SERVE_PORT) == 0 else int(RCLONE_SERVE_PORT)
+
+RCLONE_SERVE_USER = environ.get('RCLONE_SERVE_USER', '')
+if len(RCLONE_SERVE_USER) == 0:
+    RCLONE_SERVE_USER = ''
+
+RCLONE_SERVE_PASS = environ.get('RCLONE_SERVE_PASS', '')
+if len(RCLONE_SERVE_PASS) == 0:
+    RCLONE_SERVE_PASS = ''
+
+QB_SEED = environ.get('QB_SEED', '')
+QB_SEED = QB_SEED.lower() == 'true'
+
 bot = tgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN,
                parse_mode=enums.ParseMode.HTML, max_concurrent_transmissions=1000).start()
 bot_loop = bot.loop
