@@ -71,50 +71,20 @@ def start(update, context):
         start_string = f'Type /{BotCommands.HelpCommand} to get a list of available commands'
         sendMessage(start_string, context.bot, update.message)
 
-def restart(update, context):
-    cmd = update.effective_message.text.split(' ', 1)
-    dynoRestart = False
-    dynoKill = False
-    if len(cmd) == 2:
-        dynoRestart = (cmd[1].lower()).startswith('d')
-        dynoKill = (cmd[1].lower()).startswith('k')
-    if (not HEROKU_API_KEY) or (not HEROKU_APP_NAME):
-        LOGGER.info("If you want Heroku features, fill HEROKU_APP_NAME HEROKU_API_KEY vars.")
-        dynoRestart = False
-        dynoKill = False
-    if dynoRestart:
-        LOGGER.info("Dyno Restarting.")
-        restart_message = sendMessage("Dyno Restarting.", context.bot, update.message)
-        with open(".restartmsg", "w") as f:
-            f.truncate(0)
-            f.write(f"{restart_message.chat.id}\n{restart_message.message_id}\n")
-        heroku_conn = heroku3.from_key(HEROKU_API_KEY)
-        app = heroku_conn.app(HEROKU_APP_NAME)
-        app.restart()
-    elif dynoKill:
-        LOGGER.info("Killing Dyno. MUHAHAHA")
-        sendMessage("Killed Dyno.", context.bot, update.message)
-        alive.kill()
-        clean_all()
-        heroku_conn = heroku3.from_key(HEROKU_API_KEY)
-        app = heroku_conn.app(HEROKU_APP_NAME)
-        proclist = app.process_formation()
-        for po in proclist:
-            app.process_formation()[po.type].scale(0)
-    else:
-        LOGGER.info("Normally Restarting.")
-        restart_message = sendMessage("Normally Restarting.", context.bot, update.message)
-        if Interval:
-            Interval[0].cancel()
-            Interval.clear()
-        alive.kill()
-        clean_all()
-        srun(["pkill", "-9", "-f", "gunicorn|extra-api|last-api|megasdkrest|new-api"])
-        srun(["python3", "update.py"])
-        with open(".restartmsg", "w") as f:
-            f.truncate(0)
-            f.write(f"{restart_message.chat.id}\n{restart_message.message_id}\n")
-        osexecl(executable, executable, "-m", "bot")
+def restart(client, message):
+    restart_message = await sendMessage(message, "Restarting...")
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
+    for interval in [QbInterval, Interval]:
+        if interval:
+            interval[0].cancel()
+    await sync_to_async(clean_all)
+    proc1 = await create_subprocess_exec('pkill', '-9', '-f', 'gunicorn|aria2c|qbittorrent-nox|ffmpeg|rclone')
+    proc2 = await create_subprocess_exec('python3', 'update.py')
+    await gather(proc1.wait(), proc2.wait())
+    async with aiopen(".restartmsg", "w") as f:
+        await f.write(f"{restart_message.chat.id}\n{restart_message.id}\n")
+    osexecl(executable, executable, "-m", "bot")
 
 def ping(update, context):
     start_time = int(round(time() * 1000))
