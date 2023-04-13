@@ -5,6 +5,7 @@ from psutil import disk_usage, cpu_percent, swap_memory, cpu_count, virtual_memo
 from time import time
 from sys import executable
 from telegram import InlineKeyboardMarkup
+from aiofiles import open as aiopen
 from telegram.ext import CommandHandler
 from bot import OWNER_ID, bot, botStartTime, IGNORE_PENDING_REQUESTS, LOGGER, Interval, INCOMPLETE_TASK_NOTIFIER, DB_URI, HEROKU_API_KEY, HEROKU_APP_NAME
 from .helper.ext_utils.fs_utils import start_cleanup, clean_all, exit_clean_up
@@ -83,7 +84,7 @@ def restart(client, message):
     proc2 = await create_subprocess_exec('python3', 'update.py')
     await gather(proc1.wait(), proc2.wait())
     async with aiopen(".restartmsg", "w") as f:
-        await f.write(f"{restart_message.chat.id}\n{restart_message.id}\n")
+        sendMessage f.write(f"{restart_message.chat.id}\n{restart_message.id}\n")
     osexecl(executable, executable, "-m", "bot")
 
 def ping(update, context):
