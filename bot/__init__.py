@@ -702,7 +702,6 @@ except:
                'AUTHORIZED_CHATS': AUTHORIZED_CHATS,
                'AUTO_DELETE_MESSAGE_DURATION': AUTO_DELETE_MESSAGE_DURATION,
                'BASE_URL': BASE_URL,
-               'BASE_URL_PORT': BASE_URL_PORT,
                'BOT_TOKEN': BOT_TOKEN,
                'CMD_INDEX': CMD_INDEX,
                'DATABASE_URL': DATABASE_URL,
