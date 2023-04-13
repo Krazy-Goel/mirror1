@@ -21,7 +21,7 @@ from megasdkrestclient import MegaSdkRestClient, errors as mega_err
 main_loop = get_event_loop()
 
 faulthandler_enable()
-
+user_data = {}
 setdefaulttimeout(600)
 
 botStartTime = time()
