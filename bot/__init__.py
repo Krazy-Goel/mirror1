@@ -703,59 +703,12 @@ try:
 except:
     SEARCH_PLUGINS = None
     
-    config_dict = {'AS_DOCUMENT': AS_DOCUMENT,
-               'AUTHORIZED_CHATS': AUTHORIZED_CHATS,
-               'AUTO_DELETE_MESSAGE_DURATION': AUTO_DELETE_MESSAGE_DURATION,
-               'BASE_URL': BASE_URL,
-               'BOT_TOKEN': BOT_TOKEN,
-               'CMD_INDEX': CMD_INDEX,
-               'DATABASE_URL': DATABASE_URL,
-               'DEFAULT_UPLOAD': DEFAULT_UPLOAD,
-               'DOWNLOAD_DIR': DOWNLOAD_DIR,
-               'DUMP_CHAT': DUMP_CHAT,
-               'EQUAL_SPLITS': EQUAL_SPLITS,
-               'EXTENSION_FILTER': EXTENSION_FILTER,
-               'GDRIVE_ID': GDRIVE_ID,
-               'INCOMPLETE_TASK_NOTIFIER': INCOMPLETE_TASK_NOTIFIER,
-               'INDEX_URL': INDEX_URL,
-               'IS_TEAM_DRIVE': IS_TEAM_DRIVE,
-               'LEECH_FILENAME_PREFIX': LEECH_FILENAME_PREFIX,
-               'LEECH_SPLIT_SIZE': LEECH_SPLIT_SIZE,
-               'MEDIA_GROUP': MEDIA_GROUP,
-               'MEGA_API_KEY': MEGA_API_KEY,
-               'MEGA_EMAIL_ID': MEGA_EMAIL_ID,
-               'MEGA_PASSWORD': MEGA_PASSWORD,
-               'OWNER_ID': OWNER_ID,
-               'QUEUE_ALL': QUEUE_ALL,
-               'QUEUE_DOWNLOAD': QUEUE_DOWNLOAD,
-               'QUEUE_UPLOAD': QUEUE_UPLOAD,
-               'RCLONE_FLAGS': RCLONE_FLAGS,
-               'RCLONE_PATH': RCLONE_PATH,
-               'RCLONE_SERVE_URL': RCLONE_SERVE_URL,
-               'RCLONE_SERVE_USER': RCLONE_SERVE_USER,
-               'RCLONE_SERVE_PASS': RCLONE_SERVE_PASS,
-               'RCLONE_SERVE_PORT': RCLONE_SERVE_PORT,
-               'RSS_CHAT_ID': RSS_CHAT_ID,
-               'RSS_DELAY': RSS_DELAY,
-               'SEARCH_API_LINK': SEARCH_API_LINK,
-               'SEARCH_LIMIT': SEARCH_LIMIT,
-               'SEARCH_PLUGINS': SEARCH_PLUGINS,
-               'STATUS_LIMIT': STATUS_LIMIT,
-               'STATUS_UPDATE_INTERVAL': STATUS_UPDATE_INTERVAL,
-               'STOP_DUPLICATE': STOP_DUPLICATE,
-               'SUDO_USERS': SUDO_USERS,
-               'TELEGRAM_API': TELEGRAM_API,
-               'TELEGRAM_HASH': TELEGRAM_HASH,
-               'TORRENT_TIMEOUT': TORRENT_TIMEOUT,
-               'UPSTREAM_REPO': UPSTREAM_REPO,
-               'UPSTREAM_BRANCH': UPSTREAM_BRANCH,
-               'UPTOBOX_TOKEN': UPTOBOX_TOKEN,
-               'USER_SESSION_STRING': USER_SESSION_STRING,
-               'USE_SERVICE_ACCOUNTS': USE_SERVICE_ACCOUNTS,
-               'VIEW_LINK': VIEW_LINK,
-               'WEB_PINCODE': WEB_PINCODE,
-               'YT_DLP_QUALITY': YT_DLP_QUALITY,
-               'QB_SEED': QB_SEED}
+
+    
+    
+    
+    
+    
     
 BASE_URL_PORT = environ.get('BASE_URL_PORT', '')
 BASE_URL_PORT = 80 if len(BASE_URL_PORT) == 0 else int(BASE_URL_PORT)
@@ -944,6 +897,64 @@ if len(RCLONE_SERVE_PASS) == 0:
 
 QB_SEED = environ.get('QB_SEED', '')
 QB_SEED = QB_SEED.lower() == 'true'
+
+
+
+
+
+    config_dict = {'AS_DOCUMENT': AS_DOCUMENT,
+               'AUTHORIZED_CHATS': AUTHORIZED_CHATS,
+               'AUTO_DELETE_MESSAGE_DURATION': AUTO_DELETE_MESSAGE_DURATION,
+               'BASE_URL': BASE_URL,
+               'BOT_TOKEN': BOT_TOKEN,
+               'CMD_INDEX': CMD_INDEX,
+               'DATABASE_URL': DATABASE_URL,
+               'DEFAULT_UPLOAD': DEFAULT_UPLOAD,
+               'DOWNLOAD_DIR': DOWNLOAD_DIR,
+               'DUMP_CHAT': DUMP_CHAT,
+               'EQUAL_SPLITS': EQUAL_SPLITS,
+               'EXTENSION_FILTER': EXTENSION_FILTER,
+               'GDRIVE_ID': GDRIVE_ID,
+               'INCOMPLETE_TASK_NOTIFIER': INCOMPLETE_TASK_NOTIFIER,
+               'INDEX_URL': INDEX_URL,
+               'IS_TEAM_DRIVE': IS_TEAM_DRIVE,
+               'LEECH_FILENAME_PREFIX': LEECH_FILENAME_PREFIX,
+               'LEECH_SPLIT_SIZE': LEECH_SPLIT_SIZE,
+               'MEDIA_GROUP': MEDIA_GROUP,
+               'MEGA_API_KEY': MEGA_API_KEY,
+               'MEGA_EMAIL_ID': MEGA_EMAIL_ID,
+               'MEGA_PASSWORD': MEGA_PASSWORD,
+               'OWNER_ID': OWNER_ID,
+               'QUEUE_ALL': QUEUE_ALL,
+               'QUEUE_DOWNLOAD': QUEUE_DOWNLOAD,
+               'QUEUE_UPLOAD': QUEUE_UPLOAD,
+               'RCLONE_FLAGS': RCLONE_FLAGS,
+               'RCLONE_PATH': RCLONE_PATH,
+               'RCLONE_SERVE_URL': RCLONE_SERVE_URL,
+               'RCLONE_SERVE_USER': RCLONE_SERVE_USER,
+               'RCLONE_SERVE_PASS': RCLONE_SERVE_PASS,
+               'RCLONE_SERVE_PORT': RCLONE_SERVE_PORT,
+               'RSS_CHAT_ID': RSS_CHAT_ID,
+               'RSS_DELAY': RSS_DELAY,
+               'SEARCH_API_LINK': SEARCH_API_LINK,
+               'SEARCH_LIMIT': SEARCH_LIMIT,
+               'SEARCH_PLUGINS': SEARCH_PLUGINS,
+               'STATUS_LIMIT': STATUS_LIMIT,
+               'STATUS_UPDATE_INTERVAL': STATUS_UPDATE_INTERVAL,
+               'STOP_DUPLICATE': STOP_DUPLICATE,
+               'SUDO_USERS': SUDO_USERS,
+               'TELEGRAM_API': TELEGRAM_API,
+               'TELEGRAM_HASH': TELEGRAM_HASH,
+               'TORRENT_TIMEOUT': TORRENT_TIMEOUT,
+               'UPSTREAM_REPO': UPSTREAM_REPO,
+               'UPSTREAM_BRANCH': UPSTREAM_BRANCH,
+               'UPTOBOX_TOKEN': UPTOBOX_TOKEN,
+               'USER_SESSION_STRING': USER_SESSION_STRING,
+               'USE_SERVICE_ACCOUNTS': USE_SERVICE_ACCOUNTS,
+               'VIEW_LINK': VIEW_LINK,
+               'WEB_PINCODE': WEB_PINCODE,
+               'YT_DLP_QUALITY': YT_DLP_QUALITY,
+               'QB_SEED': QB_SEED}
 
 bot = tgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN,
                parse_mode=enums.ParseMode.HTML, max_concurrent_transmissions=1000).start()
