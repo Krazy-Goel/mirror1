@@ -4,6 +4,7 @@ from subprocess import run as srun, check_output
 from psutil import disk_usage, cpu_percent, swap_memory, cpu_count, virtual_memory, net_io_counters, boot_time
 from time import time
 from sys import executable
+from os import execl as osexecl
 from telegram import InlineKeyboardMarkup
 from aiofiles import open as aiopen
 from telegram.ext import CommandHandler
