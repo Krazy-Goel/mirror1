@@ -18,6 +18,9 @@ from .helper.telegram_helper.filters import CustomFilters
 from .helper.telegram_helper.button_build import ButtonMaker
 from .modules import authorize, list, cancel_mirror, mirror_status, mirror, clone, watch, shell, eval, delete, count, leech_settings, search, rss, qbselect, antispam
 import heroku3
+from pyrogram.handlers import MessageHandler
+from pyrogram.filters import command
+from asyncio import create_subprocess_exec, gather
 
 def stats(update, context):
     if ospath.exists('.git'):
@@ -299,27 +302,23 @@ def main():
         try: bot.sendMessage(OWNER_ID, 'Bot Started.', 'HTML')
         except: pass
 
-    start_handler = CommandHandler(BotCommands.StartCommand, start, run_async=True)
-    ping_handler = CommandHandler(BotCommands.PingCommand, ping,
-                                  filters=CustomFilters.authorized_chat | CustomFilters.authorized_user, run_async=True)
-    restart_handler = CommandHandler(BotCommands.RestartCommand, restart,
-                                     filters=CustomFilters.owner_filter | CustomFilters.sudo_user, run_async=True)
-    help_handler = CommandHandler(BotCommands.HelpCommand,
-                                  bot_help, filters=CustomFilters.authorized_chat | CustomFilters.authorized_user, run_async=True)
-    stats_handler = CommandHandler(BotCommands.StatsCommand,
-                                   stats, filters=CustomFilters.authorized_chat | CustomFilters.authorized_user, run_async=True)
-    log_handler = CommandHandler(BotCommands.LogCommand, log, filters=CustomFilters.owner_filter | CustomFilters.sudo_user, run_async=True)
-    dispatcher.add_handler(start_handler)
-    dispatcher.add_handler(ping_handler)
-    dispatcher.add_handler(restart_handler)
-    dispatcher.add_handler(help_handler)
-    dispatcher.add_handler(stats_handler)
-    dispatcher.add_handler(log_handler)
-    updater.start_polling(drop_pending_updates=IGNORE_PENDING_REQUESTS)
-    LOGGER.info("QMirrorLeechBot Started.")
+async def main():
+    await gather(start_cleanup(), torrent_search.initiate_search_tools(), restart_notification())
+
+    bot.add_handler(MessageHandler(
+        start, filters=command(BotCommands.StartCommand)))
+    bot.add_handler(MessageHandler(log, filters=command(
+        BotCommands.LogCommand) & CustomFilters.sudo))
+    bot.add_handler(MessageHandler(restart, filters=command(
+        BotCommands.RestartCommand) & CustomFilters.sudo))
+    bot.add_handler(MessageHandler(ping, filters=command(
+        BotCommands.PingCommand) & CustomFilters.authorized))
+    bot.add_handler(MessageHandler(bot_help, filters=command(
+        BotCommands.HelpCommand) & CustomFilters.authorized))
+    bot.add_handler(MessageHandler(stats, filters=command(
+        BotCommands.StatsCommand) & CustomFilters.authorized))
+    LOGGER.info("Bot Started!")
     signal(SIGINT, exit_clean_up)
 
-app.start()
-main()
-
-main_loop.run_forever()
+bot.loop.run_until_complete(main())
+bot.loop.run_forever()
