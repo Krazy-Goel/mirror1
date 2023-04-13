@@ -11,7 +11,7 @@ from subprocess import Popen, run as srun, check_output
 from time import sleep, time
 from threading import Thread, Lock
 from dotenv import load_dotenv
-from pyrogram import Client, enums
+from pyrogram import Client as tgClient, enums
 from asyncio import get_event_loop
 from megasdkrestclient import MegaSdkRestClient, errors as mega_err
 
@@ -701,8 +701,9 @@ BASE_URL_PORT = 80 if len(BASE_URL_PORT) == 0 else int(BASE_URL_PORT)
 USE_SERVICE_ACCOUNTS = environ.get('USE_SERVICE_ACCOUNTS', '')
 USE_SERVICE_ACCOUNTS = USE_SERVICE_ACCOUNTS.lower() == 'true'
 
-updater = tgUpdater(token=BOT_TOKEN, request_kwargs={'read_timeout': 20, 'connect_timeout': 15})
-bot = updater.bot
-dispatcher = updater.dispatcher
-job_queue = updater.job_queue
-botname = bot.username
+bot = tgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN,
+               parse_mode=enums.ParseMode.HTML, max_concurrent_transmissions=1000).start()
+bot_loop = bot.loop
+bot_name = bot.me.username
+scheduler = AsyncIOScheduler(timezone=str(
+    get_localzone()), event_loop=bot_loop)
