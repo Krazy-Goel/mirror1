@@ -1,7 +1,7 @@
 from os import path as ospath, makedirs
 from psycopg2 import connect, DatabaseError
 
-from bot import DB_URI, AUTHORIZED_CHATS, SUDO_USERS, AS_DOC_USERS, AS_MEDIA_USERS, rss_dict, LOGGER, botname, LEECH_LOG
+from bot import DB_URI, AUTHORIZED_CHATS, SUDO_USERS, AS_DOC_USERS, AS_MEDIA_USERS, rss_dict, LOGGER, LEECH_LOG
 
 class DbManger:
     def __init__(self):
@@ -44,7 +44,7 @@ class DbManger:
               """
         self.cur.execute(sql)
         self.cur.execute(
-            f"CREATE TABLE IF NOT EXISTS {botname} (cid bigint, link text, tag text)"
+            f"CREATE TABLE IF NOT EXISTS (cid bigint, link text, tag text)"
         )
 
         self.conn.commit()
@@ -232,7 +232,7 @@ class DbManger:
             return
         q = (cid, link, tag)
         self.cur.execute(
-            f"INSERT INTO {botname} (cid, link, tag) VALUES (%s, %s, %s)", q
+            f"INSERT INTO {} (cid, link, tag) VALUES (%s, %s, %s)", q
         )
 
         self.conn.commit()
@@ -241,14 +241,14 @@ class DbManger:
     def rm_complete_task(self, link: str):
         if self.err:
             return
-        self.cur.execute(f"DELETE FROM {botname} WHERE link = %s", (link,))
+        self.cur.execute(f"DELETE FROM {} WHERE link = %s", (link,))
         self.conn.commit()
         self.disconnect()
 
     def get_incomplete_tasks(self):
         if self.err:
             return False
-        self.cur.execute(f"SELECT * from {botname}")
+        self.cur.execute(f"SELECT * from {}")
         rows = self.cur.fetchall()  # return a list ==> (cid, link, tag)
         notifier_dict = {}
         if rows:
@@ -261,7 +261,7 @@ class DbManger:
                 else:
                     usr_dict = {row[2]: [row[1]]}
                     notifier_dict[row[0]] = usr_dict
-        self.cur.execute(f"TRUNCATE TABLE {botname}")
+        self.cur.execute(f"TRUNCATE TABLE {}")
         self.conn.commit()
         self.disconnect()
         return notifier_dict # return a dict ==> {cid: {tag: [mid, mid, ...]}}
