@@ -23,6 +23,21 @@ main_loop = get_event_loop()
 faulthandler_enable()
 setdefaulttimeout(600)
 
+Interval = []
+QbInterval = []
+QbTorrents = {}
+DRIVES_NAMES = []
+DRIVES_IDS = []
+INDEX_URLS = []
+GLOBAL_EXTENSION_FILTER = ['.aria2']
+user_data = {}
+aria2_options = {}
+qbit_options = {}
+queued_dl = {}
+queued_up = {}
+non_queued_dl = set()
+non_queued_up = set()
+
 botStartTime = time()
 download_dict_lock = Lock()
 status_reply_dict_lock = Lock()
