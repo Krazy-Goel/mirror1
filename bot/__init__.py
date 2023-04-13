@@ -86,26 +86,17 @@ try:
 except:
     TORRENT_TIMEOUT = None
 
-    Popen(
-        f"gunicorn web.wserver:app --bind 0.0.0.0:80 --worker-class gevent", shell=True)
-
-srun(["qbittorrent-nox", "-d", f"--profile={getcwd()}"])
-if not ospath.exists('.netrc'):
-    with open('.netrc', 'w'):
-        pass
-srun(["chmod", "600", ".netrc"])
-srun(["cp", ".netrc", "/root/.netrc"])
-srun(["chmod", "+x", "aria.sh"])
-srun("./aria.sh", shell=True)
-if ospath.exists('accounts.zip'):
-    if ospath.exists('accounts'):
-        srun(["rm", "-rf", "accounts"])
-    srun(["7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"])
-    srun(["chmod", "-R", "777", "accounts"])
-    osremove('accounts.zip')
-if not ospath.exists('accounts'):
-    config_dict['USE_SERVICE_ACCOUNTS'] = False
-sleep(0.5)
+PORT = os.environ.get('PORT', SERVER_PORT)
+web = subprocess.Popen([f"gunicorn wserver:start_server --bind 0.0.0.0:{PORT} --worker-class aiohttp.GunicornWebWorker"], shell=True)
+alive = subprocess.Popen(["python3", "alive.py"])
+nox = subprocess.Popen(["qbittorrent-nox", "--profile=."])
+if not os.path.exists('.netrc'):
+    subprocess.run(["touch", ".netrc"])
+subprocess.run(["cp", ".netrc", "/root/.netrc"])
+subprocess.run(["chmod", "600", ".netrc"])
+subprocess.run(["chmod", "+x", "aria.sh"])
+subprocess.run(["./aria.sh"], shell=True)
+time.sleep(0.5)
 
 Interval = []
 DRIVES_NAMES = []
