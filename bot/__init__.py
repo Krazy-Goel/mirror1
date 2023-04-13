@@ -211,6 +211,11 @@ try:
         AUTHORIZED_CHATS.add(int(_id.strip()))
 except:
     pass
+
+DEFAULT_UPLOAD = environ.get('DEFAULT_UPLOAD', '')
+if DEFAULT_UPLOAD != 'rc':
+    DEFAULT_UPLOAD = 'gd'
+    
 try:
     aid = getConfig('SUDO_USERS')
     aid = aid.split()
