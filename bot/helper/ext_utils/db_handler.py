@@ -1,279 +1,192 @@
-from os import path as ospath, makedirs
-from psycopg2 import connect, DatabaseError
+#!/usr/bin/env python3
+from aiofiles.os import path as aiopath, makedirs
+from aiofiles import open as aiopen
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import PyMongoError
+from dotenv import dotenv_values
 
-from bot import DB_URI, AUTHORIZED_CHATS, SUDO_USERS, AS_DOC_USERS, AS_MEDIA_USERS, rss_dict, LOGGER, LEECH_LOG
+from bot import DATABASE_URL, user_data, rss_dict, LOGGER, bot_id, config_dict, aria2_options, qbit_options, bot_loop
+
 
 class DbManger:
     def __init__(self):
-        self.err = False
-        self.connect()
+        self.__err = False
+        self.__db = None
+        self.__conn = None
+        self.__connect()
 
-    def connect(self):
+    def __connect(self):
         try:
-            self.conn = connect(DB_URI)
-            self.cur = self.conn.cursor()
-        except DatabaseError as error:
-            LOGGER.error(f"Error in DB connection: {error}")
-            self.err = True
+            self.__conn = AsyncIOMotorClient(DATABASE_URL)
+            self.__db = self.__conn.mltb
+        except PyMongoError as e:
+            LOGGER.error(f"Error in DB connection: {e}")
+            self.__err = True
 
-    def disconnect(self):
-        self.cur.close()
-        self.conn.close()
-
-    def db_init(self):
-        if self.err:
+    async def db_load(self):
+        if self.__err:
             return
-        sql = """CREATE TABLE IF NOT EXISTS users (
-                 uid bigint,
-                 sudo boolean DEFAULT FALSE,
-                 auth boolean DEFAULT FALSE,
-                 media boolean DEFAULT FALSE,
-                 doc boolean DEFAULT FALSE,
-                 thumb bytea DEFAULT NULL,
-                 leechlog boolean DEFAULT FALSE
-              )
-              """
-        self.cur.execute(sql)
-        sql = """CREATE TABLE IF NOT EXISTS rss (
-                 name text,
-                 link text,
-                 last text,
-                 title text,
-                 filters text
-              )
-              """
-        self.cur.execute(sql)
-        self.cur.execute(
-            f"CREATE TABLE IF NOT EXISTS (cid bigint, link text, tag text)"
-        )
-
-        self.conn.commit()
-        LOGGER.info("Database Initiated")
-        self.db_load()
-
-    def db_load(self):
+        # Save bot settings
+        await self.__db.settings.config.update_one({'_id': bot_id}, {'$set': config_dict}, upsert=True)
+        # Save Aria2c options
+        if await self.__db.settings.aria2c.find_one({'_id': bot_id}) is None:
+            await self.__db.settings.aria2c.update_one({'_id': bot_id}, {'$set': aria2_options}, upsert=True)
+        # Save qbittorrent options
+        if await self.__db.settings.qbittorrent.find_one({'_id': bot_id}) is None:
+            await self.__db.settings.qbittorrent.update_one({'_id': bot_id}, {'$set': qbit_options}, upsert=True)
         # User Data
-        self.cur.execute("SELECT * from users")
-        if rows := self.cur.fetchall():
-            for row in rows:
-                if row[1] and row[0] not in SUDO_USERS:
-                    SUDO_USERS.add(row[0])
-                elif row[2] and row[0] not in AUTHORIZED_CHATS:
-                    AUTHORIZED_CHATS.add(row[0])
-                if row[3]:
-                    AS_MEDIA_USERS.add(row[0])
-                elif row[4]:
-                    AS_DOC_USERS.add(row[0])
-                path = f"Thumbnails/{row[0]}.jpg"
-                if row[5] is not None and not ospath.exists(path):
-                    if not ospath.exists('Thumbnails'):
-                        makedirs('Thumbnails')
-                    with open(path, 'wb+') as f:
-                        f.write(row[5])
-                if row[6] and row[0] not in LEECH_LOG:
-                    LEECH_LOG.add(row[0])
+        if await self.__db.users.find_one():
+            rows = self.__db.users.find({})
+            # return a dict ==> {_id, is_sudo, is_auth, as_doc, thumb, yt_ql, media_group, equal_splits, split_size, rclone}
+            async for row in rows:
+                uid = row['_id']
+                del row['_id']
+                thumb_path = f'Thumbnails/{uid}.jpg'
+                rclone_path = f'rclone/{uid}.conf'
+                if row.get('thumb'):
+                    if not await aiopath.exists('Thumbnails'):
+                        await makedirs('Thumbnails')
+                    async with aiopen(thumb_path, 'wb+') as f:
+                        await f.write(row['thumb'])
+                    row['thumb'] = thumb_path
+                if row.get('rclone'):
+                    if not await aiopath.exists('rclone'):
+                        await makedirs('rclone')
+                    async with aiopen(rclone_path, 'wb+') as f:
+                        await f.write(row['rclone'])
+                    row['rclone'] = rclone_path
+                user_data[uid] = row
             LOGGER.info("Users data has been imported from Database")
         # Rss Data
-        self.cur.execute("SELECT * FROM rss")
-        if rows := self.cur.fetchall():
-            for row in rows:
-                f_lists = []
-                if row[4] is not None:
-                    filters_list = row[4].split('|')
-                    for x in filters_list:
-                        y = x.split(' or ')
-                        f_lists.append(y)
-                rss_dict[row[0]] = [row[1], row[2], row[3], f_lists]
+        if await self.__db.rss[bot_id].find_one():
+            # return a dict ==> {_id, title: {link, last_feed, last_name, inf, exf, command, paused}
+            rows = self.__db.rss[bot_id].find({})
+            async for row in rows:
+                user_id = row['_id']
+                del row['_id']
+                rss_dict[user_id] = row
             LOGGER.info("Rss data has been imported from Database.")
-        self.disconnect()
+        self.__conn.close
 
-    def user_auth(self, chat_id: int):
-        if self.err:
-            return "Error in DB connection, check log for details"
-        elif not self.user_check(chat_id):
-            sql = f'INSERT INTO users (uid, auth) VALUES ({chat_id}, TRUE)'
+    async def update_deploy_config(self):
+        if self.__err:
+            return
+        current_config = dict(dotenv_values('config.env'))
+        await self.__db.settings.deployConfig.replace_one({'_id': bot_id}, current_config, upsert=True)
+        self.__conn.close
+
+    async def update_config(self, dict_):
+        if self.__err:
+            return
+        await self.__db.settings.config.update_one({'_id': bot_id}, {'$set': dict_}, upsert=True)
+        self.__conn.close
+
+    async def update_aria2(self, key, value):
+        if self.__err:
+            return
+        await self.__db.settings.aria2c.update_one({'_id': bot_id}, {'$set': {key: value}}, upsert=True)
+        self.__conn.close
+
+    async def update_qbittorrent(self, key, value):
+        if self.__err:
+            return
+        await self.__db.settings.qbittorrent.update_one({'_id': bot_id}, {'$set': {key: value}}, upsert=True)
+        self.__conn.close
+
+    async def update_private_file(self, path):
+        if self.__err:
+            return
+        if await aiopath.exists(path):
+            async with aiopen(path, 'rb+') as pf:
+                pf_bin = await pf.read()
         else:
-            sql = f'UPDATE users SET auth = TRUE WHERE uid = {chat_id}'
-        self.cur.execute(sql)
-        self.conn.commit()
-        self.disconnect()
-        return 'Authorized successfully'
-
-    def user_unauth(self, chat_id: int):
-        if self.err:
-            return "Error in DB connection, check log for details"
-        elif self.user_check(chat_id):
-            sql = f'UPDATE users SET auth = FALSE WHERE uid = {chat_id}'
-            self.cur.execute(sql)
-            self.conn.commit()
-            self.disconnect()
-            return 'Unauthorized successfully'
-
-    def user_addsudo(self, user_id: int):
-        if self.err:
-            return "Error in DB connection, check log for details"
-        elif not self.user_check(user_id):
-            sql = f'INSERT INTO users (uid, sudo) VALUES ({user_id}, TRUE)'
+            pf_bin = ''
+        path = path.replace('.', '__')
+        await self.__db.settings.files.update_one({'_id': bot_id}, {'$set': {path: pf_bin}}, upsert=True)
+        if path == 'config.env':
+            await self.update_deploy_config()
         else:
-            sql = f'UPDATE users SET sudo = TRUE WHERE uid = {user_id}'
-        self.cur.execute(sql)
-        self.conn.commit()
-        self.disconnect()
-        return 'Successfully Promoted as Sudo'
+            self.__conn.close
 
-    def user_rmsudo(self, user_id: int):
-        if self.err:
-            return "Error in DB connection, check log for details"
-        elif self.user_check(user_id):
-            sql = f'UPDATE users SET sudo = FALSE WHERE uid = {user_id}'
-            self.cur.execute(sql)
-            self.conn.commit()
-            self.disconnect()
-            return 'Successfully removed from Sudo'
-
-    def user_media(self, user_id: int):
-        if self.err:
+    async def update_user_data(self, user_id):
+        if self.__err:
             return
-        elif not self.user_check(user_id):
-            sql = f'INSERT INTO users (uid, media) VALUES ({user_id}, TRUE)'
+        data = user_data[user_id]
+        if data.get('thumb'):
+            del data['thumb']
+        if data.get('rclone'):
+            del data['rclone']
+        await self.__db.users.replace_one({'_id': user_id}, data, upsert=True)
+        self.__conn.close
+
+    async def update_user_doc(self, user_id, key, path=''):
+        if self.__err:
+            return
+        if path:
+            async with aiopen(path, 'rb+') as doc:
+                doc_bin = await doc.read()
         else:
-            sql = f'UPDATE users SET media = TRUE, doc = FALSE WHERE uid = {user_id}'
-        self.cur.execute(sql)
-        self.conn.commit()
-        self.disconnect()
+            doc_bin = ''
+        await self.__db.users.update_one({'_id': user_id}, {'$set': {key: doc_bin}}, upsert=True)
+        self.__conn.close
 
-    def user_doc(self, user_id: int):
-        if self.err:
+    async def rss_update_all(self):
+        if self.__err:
             return
-        elif not self.user_check(user_id):
-            sql = f'INSERT INTO users (uid, doc) VALUES ({user_id}, TRUE)'
-        else:
-            sql = f'UPDATE users SET media = FALSE, doc = TRUE WHERE uid = {user_id}'
-        self.cur.execute(sql)
-        self.conn.commit()
-        self.disconnect()
+        for user_id in list(rss_dict.keys()):
+            await self.__db.rss[bot_id].replace_one({'_id': user_id}, rss_dict[user_id], upsert=True)
+        self.__conn.close
 
-    def user_save_thumb(self, user_id: int, path):
-        if self.err:
+    async def rss_update(self, user_id):
+        if self.__err:
             return
-        image = open(path, 'rb+')
-        image_bin = image.read()
-        sql = (
-            'UPDATE users SET thumb = %s WHERE uid = %s'
-            if self.user_check(user_id)
-            else 'INSERT INTO users (thumb, uid) VALUES (%s, %s)'
-        )
+        await self.__db.rss[bot_id].replace_one({'_id': user_id}, rss_dict[user_id], upsert=True)
+        self.__conn.close
 
-        self.cur.execute(sql, (image_bin, user_id))
-        self.conn.commit()
-        self.disconnect()
-
-    def user_rm_thumb(self, user_id: int, path):
-        if self.err:
+    async def rss_delete(self, user_id):
+        if self.__err:
             return
-        elif self.user_check(user_id):
-            sql = f'UPDATE users SET thumb = NULL WHERE uid = {user_id}'
-        self.cur.execute(sql)
-        self.conn.commit()
-        self.disconnect()
+        await self.__db.rss[bot_id].delete_one({'_id': user_id})
+        self.__conn.close
 
-        # For Leech log
-    def addleech_log(self, chat_id: int):
-        if self.err:
-            return "Error in DB connection, check log for details"
-        elif not self.user_check(chat_id):
-            sql = f'INSERT INTO users (uid, leechlog) VALUES ({chat_id}, TRUE)'
-        else:
-            sql = f'UPDATE users SET leechlog = TRUE WHERE uid = {chat_id}'
-        self.cur.execute(sql)
-        self.conn.commit()
-        self.disconnect()
-        return 'Successfully added to leech logs'
-
-    def rmleech_log(self, chat_id: int):
-        if self.err:
-            return "Error in DB connection, check log for details"
-        elif self.user_check(chat_id):
-            sql = f'UPDATE users SET leechlog = FALSE WHERE uid = {chat_id}'
-            self.cur.execute(sql)
-            self.conn.commit()
-            self.disconnect()
-            return 'Removed from leech logs successfully'
-
-    def user_check(self, uid: int):
-        self.cur.execute(f"SELECT * FROM users WHERE uid = {uid}")
-        return self.cur.fetchone()
-
-    def rss_add(self, name, link, last, title, filters):
-        if self.err:
+    async def add_incomplete_task(self, cid, link, tag):
+        if self.__err:
             return
-        q = (name, link, last, title, filters)
-        self.cur.execute("INSERT INTO rss (name, link, last, title, filters) VALUES (%s, %s, %s, %s, %s)", q)
-        self.conn.commit()
-        self.disconnect()
+        await self.__db.tasks[bot_id].insert_one({'_id': link, 'cid': cid, 'tag': tag})
+        self.__conn.close
 
-    def rss_update(self, name, last, title):
-        if self.err:
+    async def rm_complete_task(self, link):
+        if self.__err:
             return
-        q = (last, title, name)
-        self.cur.execute("UPDATE rss SET last = %s, title = %s WHERE name = %s", q)
-        self.conn.commit()
-        self.disconnect()
+        await self.__db.tasks[bot_id].delete_one({'_id': link})
+        self.__conn.close
 
-    def rss_delete(self, name):
-        if self.err:
-            return
-        self.cur.execute("DELETE FROM rss WHERE name = %s", (name,))
-        self.conn.commit()
-        self.disconnect()
-
-    def add_incomplete_task(self, cid: int, link: str, tag: str):
-        if self.err:
-            return
-        q = (cid, link, tag)
-        self.cur.execute(
-            f"INSERT INTO {} (cid, link, tag) VALUES (%s, %s, %s)", q
-        )
-
-        self.conn.commit()
-        self.disconnect()
-
-    def rm_complete_task(self, link: str):
-        if self.err:
-            return
-        self.cur.execute(f"DELETE FROM {} WHERE link = %s", (link,))
-        self.conn.commit()
-        self.disconnect()
-
-    def get_incomplete_tasks(self):
-        if self.err:
-            return False
-        self.cur.execute(f"SELECT * from {}")
-        rows = self.cur.fetchall()  # return a list ==> (cid, link, tag)
+    async def get_incomplete_tasks(self):
         notifier_dict = {}
-        if rows:
-            for row in rows:
-                if row[0] in list(notifier_dict.keys()):
-                    if row[2] in list(notifier_dict[row[0]].keys()):
-                        notifier_dict[row[0]][row[2]].append(row[1])
+        if self.__err:
+            return notifier_dict
+        if await self.__db.tasks[bot_id].find_one():
+            # return a dict ==> {_id, cid, tag}
+            rows = self.__db.tasks[bot_id].find({})
+            async for row in rows:
+                if row['cid'] in list(notifier_dict.keys()):
+                    if row['tag'] in list(notifier_dict[row['cid']]):
+                        notifier_dict[row['cid']][row['tag']].append(
+                            row['_id'])
                     else:
-                        notifier_dict[row[0]][row[2]] = [row[1]]
+                        notifier_dict[row['cid']][row['tag']] = [row['_id']]
                 else:
-                    usr_dict = {row[2]: [row[1]]}
-                    notifier_dict[row[0]] = usr_dict
-        self.cur.execute(f"TRUNCATE TABLE {}")
-        self.conn.commit()
-        self.disconnect()
-        return notifier_dict # return a dict ==> {cid: {tag: [mid, mid, ...]}}
+                    notifier_dict[row['cid']] = {row['tag']: [row['_id']]}
+        await self.__db.tasks[bot_id].drop()
+        self.__conn.close
+        return notifier_dict  # return a dict ==> {cid: {tag: [_id, _id, ...]}}
 
-
-    def trunc_table(self, name):
-        if self.err:
+    async def trunc_table(self, name):
+        if self.__err:
             return
-        self.cur.execute(f"TRUNCATE TABLE {name}")
-        self.conn.commit()
-        self.disconnect()
+        await self.__db[name][bot_id].drop()
+        self.__conn.close
 
-if DB_URI is not None:
-    DbManger().db_init()
 
+if DATABASE_URL:
+    bot_loop.run_until_complete(DbManger().db_load())
