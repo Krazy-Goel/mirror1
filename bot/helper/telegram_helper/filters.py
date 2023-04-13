@@ -1,35 +1,30 @@
-from telegram.ext import MessageFilter
-from telegram import Message
-from bot import AUTHORIZED_CHATS, SUDO_USERS, OWNER_ID
+#!/usr/bin/env python3
+from pyrogram.filters import create
+
+from bot import user_data, OWNER_ID
 
 
 class CustomFilters:
-    class __OwnerFilter(MessageFilter):
-        def filter(self, message: Message):
-            return message.from_user.id == OWNER_ID
 
-    owner_filter = __OwnerFilter()
+    async def owner_filter(self, client, update):
+        user = update.from_user or update.sender_chat
+        uid = user.id
+        return uid == OWNER_ID
 
-    class __AuthorizedUserFilter(MessageFilter):
-        def filter(self, message: Message):
-            id = message.from_user.id
-            return id in AUTHORIZED_CHATS or id in SUDO_USERS or id == OWNER_ID
+    owner = create(owner_filter)
 
-    authorized_user = __AuthorizedUserFilter()
+    async def authorized_user(self, client, update):
+        user = update.from_user or update.sender_chat
+        uid = user.id
+        chat_id = update.chat.id
+        return bool(uid == OWNER_ID or (uid in user_data and (user_data[uid].get('is_auth', False) or
+                                                              user_data[uid].get('is_sudo', False))) or (chat_id in user_data and user_data[chat_id].get('is_auth', False)))
 
-    class __AuthorizedChat(MessageFilter):
-        def filter(self, message: Message):
-            return message.chat.id in AUTHORIZED_CHATS
+    authorized = create(authorized_user)
 
-    authorized_chat = __AuthorizedChat()
+    async def sudo_user(self, client, update):
+        user = update.from_user or update.sender_chat
+        uid = user.id
+        return bool(uid == OWNER_ID or uid in user_data and user_data[uid].get('is_sudo'))
 
-    class __SudoUser(MessageFilter):
-        def filter(self, message: Message):
-            return message.from_user.id in SUDO_USERS
-
-    sudo_user = __SudoUser()
-
-    @staticmethod
-    def _owner_query(user_id):
-        return user_id == OWNER_ID or user_id in SUDO_USERS
-
+    sudo = create(sudo_user)
