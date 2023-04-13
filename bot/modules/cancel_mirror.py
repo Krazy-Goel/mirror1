@@ -1,83 +1,98 @@
-from telegram import InlineKeyboardMarkup
-from telegram.ext import CommandHandler, CallbackQueryHandler
-from time import sleep
-from bot import download_dict, dispatcher, download_dict_lock, SUDO_USERS, OWNER_ID
+#!/usr/bin/env python3
+from asyncio import sleep
+from pyrogram.handlers import MessageHandler, CallbackQueryHandler
+from pyrogram.filters import command, regex
+
+from bot import download_dict, bot, download_dict_lock, OWNER_ID, user_data
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
-from bot.helper.telegram_helper.message_utils import sendMessage, sendMarkup
-from bot.helper.ext_utils.bot_utils import getDownloadByGid, MirrorStatus, getAllDownload
+from bot.helper.telegram_helper.message_utils import sendMessage, auto_delete_message
+from bot.helper.ext_utils.bot_utils import getDownloadByGid, getAllDownload, MirrorStatus, new_task
 from bot.helper.telegram_helper import button_build
 
-def cancel_mirror(update, context):
-    user_id = update.message.from_user.id
-    if len(context.args) == 1:
-        gid = context.args[0]
-        dl = getDownloadByGid(gid)
-        if not dl:
-            return sendMessage(f"GID: <code>{gid}</code> Not Found.", context.bot, update.message)
-    elif update.message.reply_to_message:
-        mirror_message = update.message.reply_to_message
-        with download_dict_lock:
-            if mirror_message.message_id in download_dict:
-                dl = download_dict[mirror_message.message_id]
-            else:
-                dl = None
-        if not dl:
-            return sendMessage("This is not an active task!", context.bot, update.message)
-    elif len(context.args) == 0:
-        msg = f"Reply to an active <code>/{BotCommands.MirrorCommand}</code> message which was used to start the download or send <code>/{BotCommands.CancelMirror} GID</code> to cancel it!"
-        return sendMessage(msg, context.bot, update.message)
 
-    if OWNER_ID != user_id and dl.message.from_user.id != user_id and user_id not in SUDO_USERS:
-        return sendMessage("This is not your Task, STFU !", context.bot, update.message)
+async def cancel_mirror(client, message):
+    user_id = message.from_user.id
+    msg = message.text.split()
+    if len(msg) > 1:
+        gid = msg[1]
+        dl = await getDownloadByGid(gid)
+        if dl is None:
+            await sendMessage(message, f"GID: <code>{gid}</code> Not Found.")
+            return
+    elif reply_to_id := message.reply_to_message_id:
+        async with download_dict_lock:
+            dl = download_dict.get(reply_to_id, None)
+        if dl is None:
+            await sendMessage(message, "This is not an active task!")
+            return
+    elif len(msg) == 1:
+        msg = "Reply to an active Command message which was used to start the download" \
+              f" or send <code>/{BotCommands.CancelMirror} GID</code> to cancel it!"
+        await sendMessage(message, msg)
+        return
+    if OWNER_ID != user_id and dl.message.from_user.id != user_id and \
+       (user_id not in user_data or not user_data[user_id].get('is_sudo')):
+        await sendMessage(message, "This task is not for you!")
+        return
+    obj = dl.download()
+    await obj.cancel_download()
 
-    if dl.status() == MirrorStatus.STATUS_ARCHIVING:
-        sendMessage("Archival in Progress, You Can't Cancel It.", context.bot, update.message)
-    elif dl.status() == MirrorStatus.STATUS_EXTRACTING:
-        sendMessage("Extract in Progress, You Can't Cancel It.", context.bot, update.message)
-    elif dl.status() == MirrorStatus.STATUS_SPLITTING:
-        sendMessage("Split in Progress, You Can't Cancel It.", context.bot, update.message)
-    else:
-        dl.download().cancel_download()
 
-def cancel_all(status):
-    gid = ''
-    while dl := getAllDownload(status):
-        if dl.gid() != gid:
-            gid = dl.gid()
-            dl.download().cancel_download()
-            sleep(1)
+@new_task
+async def cancel_all(status):
+    matches = await getAllDownload(status)
+    if not matches:
+        return False
+    for dl in matches:
+        obj = dl.download()
+        await obj.cancel_download()
+        await sleep(1)
+    return True
 
-def cancell_all_buttons(update, context):
+
+@new_task
+async def cancell_all_buttons(client, message):
+    async with download_dict_lock:
+        count = len(download_dict)
+    if count == 0:
+        await sendMessage(message, "No active tasks!")
+        return
     buttons = button_build.ButtonMaker()
-    buttons.sbutton("Downloading", "canall down")
-    buttons.sbutton("Uploading", "canall up")
-    buttons.sbutton("Seeding", "canall seed")
-    buttons.sbutton("Cloning", "canall clone")
-    buttons.sbutton("All", "canall all")
-    button = InlineKeyboardMarkup(buttons.build_menu(2))
-    sendMarkup('Choose tasks to cancel.', context.bot, update.message, button)
+    buttons.ibutton("Downloading", f"canall {MirrorStatus.STATUS_DOWNLOADING}")
+    buttons.ibutton("Uploading", f"canall {MirrorStatus.STATUS_UPLOADING}")
+    buttons.ibutton("Seeding", f"canall {MirrorStatus.STATUS_SEEDING}")
+    buttons.ibutton("Cloning", f"canall {MirrorStatus.STATUS_CLONING}")
+    buttons.ibutton("Extracting", f"canall {MirrorStatus.STATUS_EXTRACTING}")
+    buttons.ibutton("Archiving", f"canall {MirrorStatus.STATUS_ARCHIVING}")
+    buttons.ibutton("QueuedDl", f"canall {MirrorStatus.STATUS_QUEUEDL}")
+    buttons.ibutton("QueuedUp", f"canall {MirrorStatus.STATUS_QUEUEUP}")
+    buttons.ibutton("Paused", f"canall {MirrorStatus.STATUS_PAUSED}")
+    buttons.ibutton("All", "canall all")
+    buttons.ibutton("Close", "canall close")
+    button = buttons.build_menu(2)
+    can_msg = await sendMessage(message, 'Choose tasks to cancel.', button)
+    await auto_delete_message(message, can_msg)
 
-def cancel_all_update(update, context):
-    query = update.callback_query
-    user_id = query.from_user.id
-    data = query.data
-    data = data.split()
-    if CustomFilters._owner_query(user_id):
-        query.answer()
-        query.message.delete()
-        cancel_all(data[1])
+
+@new_task
+async def cancel_all_update(client, query):
+    data = query.data.split()
+    message = query.message
+    reply_to = message.reply_to_message
+    await query.answer()
+    if data[1] == 'close':
+        await reply_to.delete()
+        await message.delete()
     else:
-        query.answer(text="This is not yours, STFU !", show_alert=True)
+        res = await cancel_all(data[1])
+        if not res:
+            await sendMessage(reply_to, f"No matching tasks for {data[1]}!")
 
-cancel_mirror_handler = CommandHandler(BotCommands.CancelMirror, cancel_mirror,
-                                       filters=(CustomFilters.authorized_chat | CustomFilters.authorized_user), run_async=True)
 
-cancel_all_handler = CommandHandler(BotCommands.CancelAllCommand, cancell_all_buttons,
-                                    filters=CustomFilters.owner_filter | CustomFilters.sudo_user, run_async=True)
-
-cancel_all_buttons_handler = CallbackQueryHandler(cancel_all_update, pattern="canall", run_async=True)
-
-dispatcher.add_handler(cancel_all_handler)
-dispatcher.add_handler(cancel_mirror_handler)
-dispatcher.add_handler(cancel_all_buttons_handler)
+bot.add_handler(MessageHandler(cancel_mirror, filters=command(
+    BotCommands.CancelMirror) & CustomFilters.authorized))
+bot.add_handler(MessageHandler(cancell_all_buttons, filters=command(
+    BotCommands.CancelAllCommand) & CustomFilters.sudo))
+bot.add_handler(CallbackQueryHandler(cancel_all_update,
+                filters=regex("^canall") & CustomFilters.sudo))
