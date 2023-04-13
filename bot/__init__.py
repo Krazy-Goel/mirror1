@@ -87,7 +87,7 @@ except:
     TORRENT_TIMEOUT = None
 
     Popen(
-        f"gunicorn web.wserver:app --bind 0.0.0.0:{BASE_URL_PORT} --worker-class gevent", shell=True)
+        f"gunicorn web.wserver:app --bind 0.0.0.0:80 --worker-class gevent", shell=True)
 
 srun(["qbittorrent-nox", "-d", f"--profile={getcwd()}"])
 if not ospath.exists('.netrc'):
