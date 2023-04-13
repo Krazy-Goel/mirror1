@@ -15,7 +15,7 @@ from .helper.ext_utils.bot_utils import get_readable_file_size, get_readable_tim
 from .helper.ext_utils.db_handler import DbManger
 from .helper.ext_utils.heroku_helper import getHerokuDetails
 from .helper.telegram_helper.bot_commands import BotCommands
-from .helper.telegram_helper.message_utils import sendMessage, editMessage, sendLogFile
+from .helper.telegram_helper.message_utils import sendMessage, editMessage, sendFile
 from .helper.telegram_helper.filters import CustomFilters
 from .helper.telegram_helper.button_build import ButtonMaker
 from .modules import authorize, list, cancel_mirror, mirror_status, mirror, clone, watch, shell, eval, delete, count, leech_settings, search, rss, qbselect, antispam
@@ -95,7 +95,7 @@ def ping(update, context):
     editMessage(f'{end_time - start_time} ms', reply)
 
 def log(update, context):
-    sendLogFile(context.bot, update.message)
+    sendFile(context.bot, update.message)
 
 help_string_telegraph = f'''<br>
 <b>/{BotCommands.HelpCommand}</b>: To get this message
