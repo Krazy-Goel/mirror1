@@ -135,6 +135,54 @@ def get_client():
 DOWNLOAD_DIR = None
 BOT_TOKEN = None
 
+BOT_TOKEN = environ.get('BOT_TOKEN', '')
+if len(BOT_TOKEN) == 0:
+    log_error("BOT_TOKEN variable is missing! Exiting now")
+    exit(1)
+
+bot_id = BOT_TOKEN.split(':', 1)[0]
+
+DATABASE_URL = environ.get('DATABASE_URL', '')
+if len(DATABASE_URL) == 0:
+    DATABASE_URL = ''
+
+if DATABASE_URL:
+    conn = MongoClient(DATABASE_URL)
+    db = conn.mltb
+    current_config = dict(dotenv_values('config.env'))
+    old_config = db.settings.deployConfig.find_one({'_id': bot_id})
+    if old_config is None:
+        db.settings.deployConfig.replace_one(
+            {'_id': bot_id}, current_config, upsert=True)
+    else:
+        del old_config['_id']
+    if old_config and old_config != current_config:
+        db.settings.deployConfig.replace_one(
+            {'_id': bot_id}, current_config, upsert=True)
+    elif config_dict := db.settings.config.find_one({'_id': bot_id}):
+        del config_dict['_id']
+        for key, value in config_dict.items():
+            environ[key] = str(value)
+    if pf_dict := db.settings.files.find_one({'_id': bot_id}):
+        del pf_dict['_id']
+        for key, value in pf_dict.items():
+            if value:
+                file_ = key.replace('__', '.')
+                with open(file_, 'wb+') as f:
+                    f.write(value)
+    if a2c_options := db.settings.aria2c.find_one({'_id': bot_id}):
+        del a2c_options['_id']
+        aria2_options = a2c_options
+    if qbit_opt := db.settings.qbittorrent.find_one({'_id': bot_id}):
+        del qbit_opt['_id']
+        qbit_options = qbit_opt
+    conn.close()
+    BOT_TOKEN = environ.get('BOT_TOKEN', '')
+    bot_id = BOT_TOKEN.split(':', 1)[0]
+    DATABASE_URL = environ.get('DATABASE_URL', '')
+else:
+    config_dict = {}
+
 download_dict_lock = Lock()
 status_reply_dict_lock = Lock()
 # Key: update.effective_chat.id
