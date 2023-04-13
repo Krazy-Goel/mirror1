@@ -1,161 +1,127 @@
-from time import sleep, time
-from telegram import InlineKeyboardMarkup
-from telegram.message import Message
-from telegram.error import RetryAfter
+#!/usr/bin/env python3
+from asyncio import sleep
 from pyrogram.errors import FloodWait
-from bot import AUTO_DELETE_MESSAGE_DURATION, LOGGER, status_reply_dict, status_reply_dict_lock, \
-                Interval, DOWNLOAD_STATUS_UPDATE_INTERVAL, RSS_CHAT_ID, bot, rss_session, TELEGRAM_API, TELEGRAM_HASH
-from bot.helper.ext_utils.bot_utils import get_readable_message, setInterval
-import asyncio
+from time import time
 
-def sendMessage(text: str, bot, message: Message):
-    try:
-        return bot.sendMessage(message.chat_id,
-                            reply_to_message_id=message.message_id,
-                            text=text, allow_sending_without_reply=True, parse_mode='HTMl', disable_web_page_preview=True)
-    except RetryAfter as r:
-        LOGGER.warning(str(r))
-        sleep(r.retry_after * 1.5)
-        return sendMessage(text, bot, message)
-    except Exception as e:
-        LOGGER.error(str(e))
-        return
+from bot import config_dict, LOGGER, status_reply_dict, status_reply_dict_lock, Interval, bot, user, download_dict_lock
+from bot.helper.ext_utils.bot_utils import get_readable_message, setInterval, sync_to_async
 
-def sendMarkup(text: str, bot, message: Message, reply_markup: InlineKeyboardMarkup):
-    try:
-        return bot.sendMessage(message.chat_id,
-                            reply_to_message_id=message.message_id,
-                            text=text, reply_markup=reply_markup, allow_sending_without_reply=True,
-                            parse_mode='HTMl', disable_web_page_preview=True)
-    except RetryAfter as r:
-        LOGGER.warning(str(r))
-        sleep(r.retry_after * 1.5)
-        return sendMarkup(text, bot, message, reply_markup)
-    except Exception as e:
-        LOGGER.error(str(e))
-        return
 
-def editMessage(text: str, message: Message, reply_markup=None):
+async def sendMessage(message, text, buttons=None):
     try:
-        bot.editMessageText(text=text, message_id=message.message_id,
-                              chat_id=message.chat.id,reply_markup=reply_markup,
-                              parse_mode='HTMl', disable_web_page_preview=True)
-    except RetryAfter as r:
-        LOGGER.warning(str(r))
-        sleep(r.retry_after * 1.5)
-        return editMessage(text, message, reply_markup)
+        return await message.reply(text=text, quote=True, disable_web_page_preview=True,
+                                   disable_notification=True, reply_markup=buttons)
+    except FloodWait as f:
+        LOGGER.warning(str(f))
+        await sleep(f.value * 1.5)
+        return await sendMessage(message, text, buttons)
     except Exception as e:
         LOGGER.error(str(e))
         return str(e)
 
-def sendPhoto(text: str, bot, message, photo, reply_markup=None):
+
+async def editMessage(message, text, buttons=None):
     try:
-        return bot.send_photo(chat_id=message.chat_id, photo=photo, reply_to_message_id=message.message_id,
-            caption=text, reply_markup=reply_markup, parse_mode='html')
-    except RetryAfter as r:
-        LOGGER.warning(str(r))
-        sleep(r.retry_after * 1.5)
-        return sendPhoto(text, bot, message, photo, reply_markup)
+        await message.edit(text=text, disable_web_page_preview=True, reply_markup=buttons)
+    except FloodWait as f:
+        LOGGER.warning(str(f))
+        await sleep(f.value * 1.5)
+        return await editMessage(message, text, buttons)
     except Exception as e:
         LOGGER.error(str(e))
-
-def sendRss(text: str, bot):
-    if rss_session is None:
-        try:
-            return bot.sendMessage(RSS_CHAT_ID, text, parse_mode='HTMl', disable_web_page_preview=True)
-        except RetryAfter as r:
-            LOGGER.warning(str(r))
-            sleep(r.retry_after * 1.5)
-            return sendRss(text, bot)
-        except Exception as e:
-            LOGGER.error(str(e))
-            return
-    else:
-        try:
-            with rss_session:
-                return rss_session.send_message(RSS_CHAT_ID, text, disable_web_page_preview=True)
-        except FloodWait as e:
-            LOGGER.warning(str(e))
-            sleep(e.value * 1.5)
-            return sendRss(text, bot)
-        except Exception as e:
-            LOGGER.error(str(e))
-            return
+        return str(e)
 
 
-async def sendRss_pyro(text: str):
+async def sendFile(message, file, caption=None):
     try:
-        return await rss_session.send_message(RSS_CHAT_ID, text, disable_web_page_preview=True)
-    except FloodWait as e:
-        LOGGER.warning(str(e))
-        await asyncio.sleep(e.value * 1.5)
+        return await message.reply_document(document=file, quote=True, caption=caption, disable_notification=True)
+    except FloodWait as f:
+        LOGGER.warning(str(f))
+        await sleep(f.value * 1.5)
+        return await sendFile(message, file, caption)
+    except Exception as e:
+        LOGGER.error(str(e))
+        return str(e)
+
+
+async def sendRss(text):
+    try:
+        if user:
+            return await user.send_message(chat_id=config_dict['RSS_CHAT_ID'], text=text, disable_web_page_preview=True,
+                                           disable_notification=True)
+        else:
+            return await bot.send_message(chat_id=config_dict['RSS_CHAT_ID'], text=text, disable_web_page_preview=True,
+                                          disable_notification=True)
+    except FloodWait as f:
+        LOGGER.warning(str(f))
+        await sleep(f.value * 1.5)
         return await sendRss(text)
     except Exception as e:
         LOGGER.error(str(e))
-        return
+        return str(e)
 
-def deleteMessage(bot, message: Message):
+
+async def deleteMessage(message):
     try:
-        bot.deleteMessage(chat_id=message.chat.id,
-                           message_id=message.message_id)
-    except Exception as e:
-        LOGGER.error(str(e))
+        await message.delete()
+    except:
+        pass
 
-def sendLogFile(bot, message: Message):
-    with open('log.txt', 'rb') as f:
-        bot.sendDocument(document=f, filename=f.name,
-                          reply_to_message_id=message.message_id,
-                          chat_id=message.chat_id)
 
-def auto_delete_message(bot, cmd_message: Message, bot_message: Message):
-    if AUTO_DELETE_MESSAGE_DURATION != -1:
-        sleep(AUTO_DELETE_MESSAGE_DURATION)
-        try:
-            # Skip if None is passed meaning we don't want to delete bot xor cmd message
-            deleteMessage(bot, cmd_message)
-            deleteMessage(bot, bot_message)
-        except AttributeError:
-            pass
+async def auto_delete_message(cmd_message=None, bot_message=None):
+    if config_dict['AUTO_DELETE_MESSAGE_DURATION'] != -1:
+        await sleep(config_dict['AUTO_DELETE_MESSAGE_DURATION'])
+        if cmd_message is not None:
+            await deleteMessage(cmd_message)
+        if bot_message is not None:
+            await deleteMessage(bot_message)
 
-def delete_all_messages():
-    with status_reply_dict_lock:
-        for data in list(status_reply_dict.values()):
+
+async def delete_all_messages():
+    async with status_reply_dict_lock:
+        for key, data in list(status_reply_dict.items()):
             try:
-                deleteMessage(bot, data[0])
-                del status_reply_dict[data[0].chat.id]
+                del status_reply_dict[key]
+                await deleteMessage(data[0])
             except Exception as e:
                 LOGGER.error(str(e))
 
-def update_all_messages(force=False):
-    with status_reply_dict_lock:
-        if not force and (not status_reply_dict or not Interval or time() - list(status_reply_dict.values())[0][1] < 2):
-            return
 
-    msg, buttons = get_readable_message()
-    with status_reply_dict_lock:
-        for chat_id in status_reply_dict:
+async def update_all_messages(force=False):
+    async with status_reply_dict_lock:
+        if not status_reply_dict or not Interval or (not force and time() - list(status_reply_dict.values())[0][1] < 3):
+            return
+        for chat_id in list(status_reply_dict.keys()):
+            status_reply_dict[chat_id][1] = time()
+    async with download_dict_lock:
+        msg, buttons = await sync_to_async(get_readable_message)
+    if msg is None:
+        return
+    async with status_reply_dict_lock:
+        for chat_id in list(status_reply_dict.keys()):
             if status_reply_dict[chat_id] and msg != status_reply_dict[chat_id][0].text:
-                if buttons == "":
-                    rmsg = editMessage(msg, status_reply_dict[chat_id][0])
-                else:
-                    rmsg = editMessage(msg, status_reply_dict[chat_id][0], buttons)
-                if rmsg == "Message to edit not found":
+                rmsg = await editMessage(status_reply_dict[chat_id][0], msg, buttons)
+                if isinstance(rmsg, str) and rmsg.startswith('Telegram says: [400'):
                     del status_reply_dict[chat_id]
-                    return
+                    continue
                 status_reply_dict[chat_id][0].text = msg
                 status_reply_dict[chat_id][1] = time()
 
-def sendStatusMessage(msg, bot):
-    progress, buttons = get_readable_message()
-    with status_reply_dict_lock:
-        if msg.chat.id in status_reply_dict:
-            message = status_reply_dict[msg.chat.id][0]
-            deleteMessage(bot, message)
-            del status_reply_dict[msg.chat.id]
-        if buttons == "":
-            message = sendMessage(progress, bot, msg)
-        else:
-            message = sendMarkup(progress, bot, msg, buttons)
-        status_reply_dict[msg.chat.id] = [message, time()]
+
+async def sendStatusMessage(msg):
+    async with download_dict_lock:
+        progress, buttons = await sync_to_async(get_readable_message)
+    if progress is None:
+        return
+    async with status_reply_dict_lock:
+        chat_id = msg.chat.id
+        if chat_id in list(status_reply_dict.keys()):
+            message = status_reply_dict[chat_id][0]
+            await deleteMessage(message)
+            del status_reply_dict[chat_id]
+        message = await sendMessage(msg, progress, buttons)
+        message.text = progress
+        status_reply_dict[chat_id] = [message, time()]
         if not Interval:
-            Interval.append(setInterval(DOWNLOAD_STATUS_UPDATE_INTERVAL, update_all_messages))
+            Interval.append(setInterval(
+                config_dict['STATUS_UPDATE_INTERVAL'], update_all_messages))
