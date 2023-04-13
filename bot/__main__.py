@@ -73,18 +73,18 @@ def start(update, context):
         start_string = f'Type /{BotCommands.HelpCommand} to get a list of available commands'
         sendMessage(start_string, context.bot, update.message)
 
-def restart(client, message):
-    restart_message = await sendMessage(message, "Restarting...")
-    if scheduler.running:
-        scheduler.shutdown(wait=False)
-    for interval in [QbInterval, Interval]:
-        if interval:
-            interval[0].cancel()
-    await sync_to_async(clean_all)
-    proc1 = await create_subprocess_exec('pkill', '-9', '-f', 'gunicorn|aria2c|qbittorrent-nox|ffmpeg|rclone')
-    proc2 = await create_subprocess_exec('python3', 'update.py')
-    await gather(proc1.wait(), proc2.wait())
-    async with aiopen(".restartmsg", "w") as f:
+def restart(update, context):
+    restart_message = sendMessage("Bot Has Started Now U Are Ready For Mirroring!!", context.bot, update)
+    fs_utils.clean_all()
+    process = psutil.Process(web.pid)
+    for proc in process.children(recursive=True):
+        proc.kill()
+    process.kill()
+    nox.kill()
+    subprocess.run(["python3", "update.py"])
+    # Save restart message object in order to reply to it after restarting
+    with open(".restartmsg", "w") as f:
+        f.truncate(0)
         f.write(f"{restart_message.chat.id}\n{restart_message.message_id}\n")
     os.execl(executable, executable, "-m", "bot")
 
