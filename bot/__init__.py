@@ -755,6 +755,9 @@ config_dict = {'AS_DOCUMENT': AS_DOCUMENT,
                'YT_DLP_QUALITY': YT_DLP_QUALITY,
                'QB_SEED': QB_SEED}
 
+USE_SERVICE_ACCOUNTS = environ.get('USE_SERVICE_ACCOUNTS', '')
+USE_SERVICE_ACCOUNTS = USE_SERVICE_ACCOUNTS.lower() == 'true'
+
 updater = tgUpdater(token=BOT_TOKEN, request_kwargs={'read_timeout': 20, 'connect_timeout': 15})
 bot = updater.bot
 dispatcher = updater.dispatcher
