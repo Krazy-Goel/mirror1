@@ -902,7 +902,7 @@ QB_SEED = QB_SEED.lower() == 'true'
 
 
 
-    config_dict = {'AS_DOCUMENT': AS_DOCUMENT,
+config_dict = {'AS_DOCUMENT': AS_DOCUMENT,
                'AUTHORIZED_CHATS': AUTHORIZED_CHATS,
                'AUTO_DELETE_MESSAGE_DURATION': AUTO_DELETE_MESSAGE_DURATION,
                'BASE_URL': BASE_URL,
