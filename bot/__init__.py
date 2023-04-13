@@ -21,11 +21,16 @@ from megasdkrestclient import MegaSdkRestClient, errors as mega_err
 main_loop = get_event_loop()
 
 faulthandler_enable()
-user_data = {}
 setdefaulttimeout(600)
 
 botStartTime = time()
-
+download_dict_lock = Lock()
+status_reply_dict_lock = Lock()
+queue_dict_lock = Lock()
+qb_listener_lock = Lock()
+status_reply_dict = {}
+download_dict = {}
+rss_dict = {}
 basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     handlers=[FileHandler('log.txt'), StreamHandler()],
                     level=INFO)
@@ -708,13 +713,6 @@ except:
     
     
     
- download_dict_lock = Lock()
-status_reply_dict_lock = Lock()
-queue_dict_lock = Lock()
-qb_listener_lock = Lock()
-status_reply_dict = {}
-download_dict = {}
-rss_dict = {}
 
 BOT_TOKEN = environ.get('BOT_TOKEN', '')
 if len(BOT_TOKEN) == 0:
