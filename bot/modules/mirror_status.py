@@ -53,9 +53,6 @@ def status_pages(update, context):
     else:
         query.message.delete()
 
-mirror_status_handler = CommandHandler(BotCommands.StatusCommand, mirror_status,
-                                       filters=CustomFilters.authorized_chat | CustomFilters.authorized_user, run_async=True)
-
 bot.add_handler(MessageHandler(mirror_status, filters=command(
     BotCommands.StatusCommand) & CustomFilters.authorized))
 bot.add_handler(CallbackQueryHandler(status_pages, filters=regex("^status")))
