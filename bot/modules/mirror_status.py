@@ -5,7 +5,7 @@ from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from telegram.ext import CommandHandler, CallbackQueryHandler
 from bot import status_reply_dict, status_reply_dict_lock, download_dict, download_dict_lock, botStartTime, DOWNLOAD_DIR, Interval, DOWNLOAD_STATUS_UPDATE_INTERVAL
 from bot.helper.telegram_helper.message_utils import sendMessage, deleteMessage, auto_delete_message, sendStatusMessage, update_all_messages
-from bot.helper.ext_utils.bot_utils import get_readable_file_size, get_readable_time, turn, setInterval
+from bot.helper.ext_utils.bot_utils import get_readable_file_size, get_readable_time, turn_page, setInterval
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from pyrogram.filters import command, regex
@@ -48,7 +48,7 @@ def status_pages(update, context):
     data = query.data
     data = data.split()
     query.answer()
-    if done := turn(data):
+    if done := turn_page(data):
         update_all_messages(True)
     else:
         query.message.delete()
