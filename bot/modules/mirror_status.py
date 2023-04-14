@@ -8,6 +8,8 @@ from bot.helper.telegram_helper.message_utils import sendMessage, deleteMessage,
 from bot.helper.ext_utils.bot_utils import get_readable_file_size, get_readable_time, turn, setInterval
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.bot_commands import BotCommands
+from pyrogram.filters import command, regex
+
 
 def mirror_status(update, context):
     with download_dict_lock:
